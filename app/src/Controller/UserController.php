@@ -37,34 +37,40 @@ class UserController extends AbstractController
     public function request(Request $request): \Symfony\Component\HttpFoundation\Response
     {
         $errors = null;
+        $users = []; 
 
-        if (!$this->userService->tableExists()) {
-            $this->userService->createUserTable();
-            $this->userService->seedUsers();
-        }
+        try {
+            if (!$this->userService->tableExists()) {
+                $this->userService->createUserTable();
+                $this->userService->seedUsers();
+            }
 
-        if ($request->isMethod('POST')) {
-            $token = $request->request->get('_token');
-            if (!$this->csrfTokenManager->isTokenValid(new CsrfToken('user_form', $token))) {
-                $errors = ['Invalid CSRF token.'];
-                $this->addFlash('error', 'Invalid CSRF token.');
-            } else {
-                $firstName = $request->request->get('firstname');
-                $lastName = $request->request->get('lastname');
-                $address = $request->request->get('address');
-
-                $result = $this->userService->createUser($firstName, $lastName, $address);
-                if (isset($result['errors'])) {
-                    $errors = $result['errors'];
-                } else if (isset($result['existingUser'])) {
-                    $this->addFlash('error', 'User already exists');
+            if ($request->isMethod('POST')) {
+                $token = $request->request->get('_token');
+                if (!$this->csrfTokenManager->isTokenValid(new CsrfToken('user_form', $token))) {
+                    $errors = ['Invalid CSRF token.'];
+                    $this->addFlash('error', 'Invalid CSRF token.');
                 } else {
-                    $this->addFlash('success', 'User added successfully!');
+                    $firstName = $request->request->get('firstname');
+                    $lastName = $request->request->get('lastname');
+                    $address = $request->request->get('address');
+                    $result = $this->userService->createUser($firstName, $lastName, $address);
+
+                    if (isset($result['errors'])) {
+                        $errors = $result['errors'];
+                    } else if (isset($result['existingUser'])) {
+                        $this->addFlash('error', 'User already exists');
+                    } else {
+                        $this->addFlash('success', 'User added successfully!');
+                    }
                 }
             }
-        }
 
-        $users = $this->userService->getUsers();
+            $users = $this->userService->getUsers();
+        
+        } catch (\Exception $e) {
+                $this->addFlash('error', 'An error occurred while processing');
+        }
 
         return $this->render('user.html.twig', [
             'method' => $request->getMethod(),
@@ -78,13 +84,19 @@ class UserController extends AbstractController
      * @param int $id
      * @return \Symfony\Component\HttpFoundation\RedirectResponse
      */
-    #[Route('/user/delete/{id}', name: 'user_delete', methods: ['POST'])]
+    #[Route('/user/delete/{id}', name: 'user_delete', methods: ['DELETE', 'POST'])]
     public function deleteUser(Request $request, int $id)
     {
         $csrfToken = $request->request->get('_token');
         if ($this->isCsrfTokenValid('delete-user-' . $id, $csrfToken)) {
-            $this->userService->deleteUser($id);
-            $this->addFlash('success', 'User deleted successfully!');
+
+            try {
+                $this->userService->deleteUser($id);
+                $this->addFlash('success', 'User deleted successfully!');
+            } catch (\Exception $e) {
+                $this->addFlash('error', 'An error occurred while processing');
+            }
+
         } else {
             $this->addFlash('error', 'Invalid CSRF token.');
         }

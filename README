@@ -5,5 +5,5 @@ Implement:
 - Add popup confirm when delete user.
 - Change method delete user From Get to Post.
 - User Entity: FirstName, Last Name, Address. (separate field data)
-- If I have so much time, I will implement PHP unitest for this
+- If I have so much time, I will implement PHP unitest for this, and add logger to log the errors like DB connection.
 
